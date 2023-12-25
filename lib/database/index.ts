@@ -13,7 +13,7 @@ if(!MONGO_URI) throw new Error('MONGODB URI NOT FOUND')
 
 cached.promsie = cached.promise || mongoose.connect(MONGO_URI , {
 
-    dbName: 'EventSphere',
+    dbName: 'events',
     bufferCommands: false
 })
 
