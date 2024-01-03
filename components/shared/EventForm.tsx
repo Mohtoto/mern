@@ -20,8 +20,13 @@ import Dropdown from "./Dropdown";
 import {FileUploader} from "./FileUploader";
 import { useState } from "react";
 import Image from "next/image";
-import DatePicker from "./DatePicker";
-import Checkbox from "./Checkbox";
+import DatePicker  from "react-datepicker"
+import "react-datepicker/dist/react-datepicker.css"
+import { Checkbox } from "@/components/ui/checkbox"
+import { useUploadThing }  from "../../lib/uploadthing";
+import { useRouter } from "next/navigation";
+import { createEvent} from '../../lib/actions/event.actions'
+
 
 type EventFromProps = {
   userId: string;
@@ -30,7 +35,8 @@ type EventFromProps = {
 
 const EventForm = ({ userId, type }: EventFromProps) => {
   const initialValues = eventDefaultValues;
-
+  const router = useRouter()
+  const { startUpload } = useUploadThing('imageUploader')
   const [files, setFiles] = useState<File[]>([]);
 
   const form = useForm<z.infer<typeof eventFormSchema>>({
@@ -38,8 +44,47 @@ const EventForm = ({ userId, type }: EventFromProps) => {
     defaultValues: initialValues,
   });
 
-  function onSubmit(values: z.infer<typeof eventFormSchema>) {
-    console.log(values);
+  async function onSubmit (values: z.infer<typeof eventFormSchema>) {
+
+    let uploadedImageurl = values.imageUrl
+
+    if(files.length > 0){ 
+
+      const uploadedImages = await startUpload(files)
+
+      if(!uploadedImages){
+
+        return
+      }
+
+      uploadedImageurl = uploadedImages[0].url
+    }
+
+    if(type === 'Create'){
+
+      try {
+
+        const newEvent = await createEvent({ 
+
+          event : {...values , imageUrl: uploadedImageurl},
+          userId,
+          path: '/profile'
+        })
+
+        if(newEvent){
+
+          form.reset()
+          router.push(`/events/${newEvent._id}`)
+        }
+        
+      } catch (error) {
+
+        console.log(error);
+        
+        
+      }
+    }
+    
   }
 
   return (
@@ -166,7 +211,7 @@ const EventForm = ({ userId, type }: EventFromProps) => {
                         className="filter-grey"
                       />
                       <p className="ml-3 whitespace-nowrap text-grey-600">Start Date:</p>
-                      <DatePicker 
+                      <DatePicker
                         selected={field.value} 
                         onChange={(date: Date) => field.onChange(date)} 
                         showTimeSelect
@@ -281,7 +326,7 @@ const EventForm = ({ userId, type }: EventFromProps) => {
             />
         </div>
 
-        <Button type="submit">Submit</Button>
+        <Button type="submit" size={'lg'} disabled={form.formState.isSubmitting} className="button col-span-2 w-full">{form.formState.isSubmitting ? ('Submitting...') : `${type} Event`}</Button>
       </form>
     </Form>
   );
